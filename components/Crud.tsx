@@ -1,7 +1,7 @@
 import axios from 'axios';
-import React, {useState, useEffect } from 'react'; 
-import { StyleSheet, View, Image, Text, TextInput, TouchableOpacity, Alert, FlatList, ScrollView } from 'react-native'; 
- 
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Image, Text, TextInput, TouchableOpacity, Alert, FlatList, ScrollView, Modal } from 'react-native';
+
 const Crud = () => {
   type Catatan = {
     id: number,
@@ -9,205 +9,231 @@ const Crud = () => {
     Catatanku: string,
     Hobi: string,
     Tanggal: string
-  } 
+  }
 
-  const [nama,setNama] = useState (''); 
-  const [catatan,setCatatan] = useState (''); 
-  const [hobi, setHobi] = useState ('');
-  const [data, setData] = useState<Catatan[]>([]); 
+  const [nama, setNama] = useState('');
+  const [catatan, setCatatan] = useState('');
+  const [hobi, setHobi] = useState('');
+  const [data, setData] = useState<Catatan[]>([]);
+  const [selectedItem, setSelectedItem] = useState<Catatan | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const openModal = (item: Catatan): void => {
+    setSelectedItem(item);
+    setModalVisible(true);
+  };
+
+  const closeModal = () => {
+    setSelectedItem(null);
+    setModalVisible(false);
+  };
 
 
   const handleButton = () => {
-    if (nama === '' && catatan === '' && hobi === '' ) {
+    if (nama === '' && catatan === '' && hobi === '') {
       Alert.alert('Error', 'Data Harus Lengkap!');
       return;
     }
 
     axios
-    .post('http://192.168.0.139/ppb_bintang/add.php', {nama,catatan,hobi})
-    .then((response) => {
-      Alert.alert('DATA BERHASIL DISIMPAN', response.data.message);
-      setNama('');
-      setCatatan('');
-      setHobi('');
-      fetchData();
-    })
+      .post('http://192.168.0.139/ppb_bintang/add.php', { nama, catatan, hobi })
+      .then((response) => {
+        Alert.alert('DATA BERHASIL DISIMPAN', response.data.message);
+        setNama('');
+        setCatatan('');
+        setHobi('');
+        fetchData();
+      })
 
-    .catch((error) => {
-      Alert.alert('DATA TIDAK LENGKAP');
-    })
+      .catch((error) => {
+        Alert.alert('DATA TIDAK LENGKAP');
+      })
   }
 
   const fetchData = () => {
     axios
-    .get('http://192.168.0.139/ppb_bintang/get.php')
-    .then((response) => {
-      if (Array.isArray(response.data)) {
-        setData(response.data)
-      } else {
-        setData([])
-      }
-    })
-    .catch(() => {
-      Alert.alert('Error', 'Gagal mengambil data dari database!');
-    })
+      .get('http://192.168.0.139/ppb_bintang/get.php')
+      .then((response) => {
+        if (Array.isArray(response.data)) {
+          setData(response.data)
+        } else {
+          setData([])
+        }
+      })
+      .catch(() => {
+        Alert.alert('Error', 'Gagal mengambil data dari database!');
+      })
   }
 
   useEffect(() => {
     fetchData();
   }, []);
-   
-  return ( 
 
-       
-      <View style={styles.container}> 
-        <View> 
-        <Text style={styles.teks}>Catatan Saya </Text> 
-          <Text style={styles.teks1}>Nama :</Text> 
-          <TextInput style={styles.input} value={nama} onChangeText={(text) => setNama(text)} placeholder='Masukan Namamu' /> 
-          <Text style={styles.teks2}>Catatan :</Text> 
-          <TextInput style={styles.input1} value={catatan} onChangeText={(text) => setCatatan(text)} multiline={true} placeholder='Masukan Catatanmu' /> 
-          <Text style={styles.teks3}>Hobi :</Text> 
-          <TextInput style={styles.input2} value={hobi} onChangeText={(text) => setHobi(text)} placeholder='Masukan Hobimu' /> 
-        </View> 
-        <View> 
-            <View style={styles.buttonContainer} > 
-                <TouchableOpacity style={styles.button}  onPress={handleButton}> 
-                    <Text style={styles.buttonText}>Kirim</Text> 
-                </TouchableOpacity>   
-            </View> 
-            <FlatList
-    data={data}
-    style={styles.list}
-    contentContainerStyle={{ paddingBottom: 100 }}
-    keyExtractor={(item) => item.id.toString()}
-    renderItem={({ item }) => (
-      <View style={styles.card}>
-        <Text style={styles.cardText}>Nama: {item.Nama}</Text>
-        <Text style={styles.cardText}>Catatan: {item.Catatanku}</Text>
-        <Text style={styles.cardText}>Hobi: {item.Hobi}</Text>
-        <Text style={styles.cardText}>Tanggal: {item.Tanggal}</Text>
-      </View>
-    )}
-  />
-
+  return (
+    <ScrollView>
+      <View>
+        <View>
+          <Text style={styles.title}>CATATAN</Text>
+          <TextInput style={styles.inputNama} value={nama} onChangeText={(text) => setNama(text)} placeholder='Masukkan Nama Anda' />
+          <TextInput style={styles.inputCatatan} value={catatan} onChangeText={(text) => setCatatan(text)} multiline={true} placeholder='Masukkan Catatan Anda' />
+          <TextInput style={styles.inputHobi} value={hobi} onChangeText={(text) => setHobi(text)} placeholder='Masukkan Hobi Anda' />
         </View>
-      </View> 
-  ); 
-} 
+
+        <TouchableOpacity style={styles.tombolKirim} onPress={handleButton}>
+          <Text style={styles.teksTombol}>Kirim</Text>
+        </TouchableOpacity>
+
+        <FlatList
+          style={styles.daftarData}
+          data={data}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => openModal(item)}>
+            <View style={styles.kartuItem}>
+              <Text>Nama: {item.Nama}</Text>
+              <Text>Catatan: {item.Catatanku}</Text>
+              <Text>Hobi: {item.Hobi}</Text>
+              <Text>Tanggal: {item.Tanggal}</Text>
+            </View>
+            </TouchableOpacity>
+          )}
+        />
+
+        {/* Modal */}
+        <Modal 
+        visible={modalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={closeModal}>
+          <View style={styles.modalOverlay}>
+          </View>
+          <View style={styles.modalContent}>
+            {selectedItem && (
+              <>
+                <Text>{selectedItem.Nama}</Text>
+                <Text>{selectedItem.Catatanku}</Text>
+                <Text>{selectedItem.Hobi}</Text>
+                <Text>{selectedItem.Tanggal}</Text>
+              </>
+            )}
+
+            <TouchableOpacity onPress={closeModal} style={styles.iconClose}>
+              <Text style={{fontSize: 25}}>✖</Text>
+            </TouchableOpacity>
+            </View>
+        </Modal>
+      </View>
+    </ScrollView>
+
+  )
+}
 
 export default Crud;
- 
-const styles = StyleSheet.create({ 
-  container: { 
-    marginTop: 30, 
-    marginLeft: 65, 
-    marginRight: 65, 
-    borderWidth: 3, 
-    height: 650, 
-    borderRadius: 12, 
-    borderColor: '#7dafc8', 
-  }, 
- 
-  teks: { 
-    textAlign: 'center', 
-    fontSize: 25, 
-    marginTop: 40, 
-    fontWeight: 'bold'  
-  }, 
- 
-  teks1: { 
-    fontSize: 18, 
-    marginTop: 50, 
-    marginLeft: 15 
-  }, 
- 
-  teks2: { 
-    fontSize: 18, 
-    marginTop: 20, 
-    marginLeft: 15 
-  }, 
 
-  teks3: { 
-    fontSize: 18, 
-    marginTop: 20, 
-    marginLeft: 15 
-  }, 
- 
-  input: { 
-    borderColor: '#7dafc8', 
-    borderWidth: 2, 
-    width: 320, 
-    height: 50, 
-    borderRadius: 10, 
-    alignSelf: 'center', 
-    marginTop: 10, 
-    paddingHorizontal: 20, 
-  }, 
- 
-  input1: { 
-    borderColor: '#7dafc8', 
-    borderWidth: 2, 
-    width: 320, 
-    height: 120, 
-    borderRadius: 7, 
-    alignSelf: 'center', 
-    marginTop: 10, 
-    paddingHorizontal: 20, 
-    textAlignVertical: 'top' 
-  }, 
+const styles = StyleSheet.create({
+  title: {
+    textAlign: 'center',
+    fontSize: 30,
+    marginTop: 40,
+    fontWeight: 'bold',
+    color: '#166534',
+  },
 
-  input2: { 
-    borderColor: '#7dafc8', 
-    borderWidth: 2, 
-    width: 320, 
-    height: 50, 
-    borderRadius: 10, 
-    alignSelf: 'center', 
-    marginTop: 10, 
-    paddingHorizontal: 20, 
+  inputNama: {
+    borderColor: '#15803D',
+    borderWidth: 2,
+    width: 400,
+    height: 50,
+    alignSelf: 'center',
+    marginTop: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
   },
- 
-  buttonContainer: { 
-    alignSelf: 'flex-end', 
-    width: '42%', 
-    height: '35%', 
-    marginTop: 40, 
- 
-  }, 
- 
-  button: { 
-    backgroundColor: '#7dafc8', 
-    paddingVertical: 15, 
-    paddingHorizontal: 40, 
-    borderRadius: 10, 
-    marginRight: 15 
-  }, 
- 
-  buttonText: { 
-    color: '#fff', 
-    fontSize: 14, 
-    fontWeight: 'bold', 
-    textAlign: 'center', 
-  }, 
-  list: {
-    marginBottom: -70,
-    marginHorizontal: 15,
-    maxHeight: 250,
+
+  inputCatatan: {
+    borderColor: '#15803D',
+    borderWidth: 2,
+    width: 400,
+    height: 120,
+    alignSelf: 'center',
+    marginTop: 10,
+    paddingHorizontal: 10,
+    textAlignVertical: 'top',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
   },
-  
-  card: {
-    backgroundColor: '#e6f2fa',
+
+  inputHobi: {
+    borderColor: '#15803D',
+    borderWidth: 2,
+    width: 400,
+    height: 50,
+    alignSelf: 'center',
+    marginTop: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
+  },
+
+  tombolKirim: {
+    backgroundColor: '#22C55E',
+    paddingVertical: 15,
+    paddingHorizontal: 40,
     borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#7dafc8',
+    marginRight: 35,
+    width: 130,
+    alignSelf: 'flex-end',
+    marginTop: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
-  
-  cardText: {
+
+  teksTombol: {
+    color: 'white',
     fontSize: 14,
-    marginBottom: 4,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
-  
+
+  daftarData: {
+    marginTop: 20
+  },
+
+  kartuItem: {
+    borderWidth: 1,
+    borderColor: '#4ADE80',
+    backgroundColor: '#D1FAE5',
+    padding: 10,
+    width: 400,
+    marginBottom: 15,
+    alignSelf: 'center',
+    borderRadius: 8,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(192, 192, 192, 0.66)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    width: '80%',
+    borderRadius: 10,
+    padding: 20,
+    position: 'absolute',
+    left: 60,
+    bottom: 400
+  },
+
+  iconClose: {
+    position: 'absolute',
+    right: 10
+  }
 });
+
