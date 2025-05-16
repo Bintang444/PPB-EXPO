@@ -1,6 +1,6 @@
 import axios from 'axios';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Image, Text, TextInput, TouchableOpacity, Alert, FlatList, ScrollView, Modal } from 'react-native';
+import { StyleSheet, View, Image, Text, TextInput, TouchableOpacity, Alert, FlatList, ScrollView, Modal, Button } from 'react-native';
 
 const Crud = () => {
   type Catatan = {
@@ -65,6 +65,52 @@ const Crud = () => {
       })
   }
 
+  const handleUpdate = () => {
+    if (selectedItem) {
+      axios
+        .post('http://192.168.0.139/ppb_bintang/update.php', {
+          id: selectedItem.id,
+          Nama: selectedItem.Nama,
+          Catatanku: selectedItem.Catatanku,
+          Hobi: selectedItem.Hobi
+        })
+        .then((response) => {
+          Alert.alert('CATATAN BERHASIL DIPERBAHARUI', response.data.message);
+          closeModal();
+          fetchData();
+        })
+
+        .catch((error) => {
+          Alert.alert('ERROR', 'CATATAN GAGAL DIPERBAHARUI');
+        })
+
+    }
+  }
+
+  const handleDelete = (id: number) => {
+    Alert.alert('KONFIRMASI', 'Apakah anda yakin akan menghapus catatan ini?', [
+      {
+        text: 'Batal',
+        style: 'cancel'
+      },
+      {
+        text: 'Hapus',
+        style: 'destructive',
+        onPress: () => {
+          axios
+            .post('http://192.168.0.139/ppb_bintang/delete.php', { id })
+            .then(() => {
+              Alert.alert('CATATAN BERHASIL DIHAPUS!');
+              fetchData();
+            })
+            .catch((error) => {
+              Alert.alert('ERROR', 'CATATAN GAGAL DIHAPUS');
+            })
+        }
+      }
+    ])
+  }
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -73,7 +119,7 @@ const Crud = () => {
     <ScrollView>
       <View>
         <View>
-          <Text style={styles.title}>CATATAN</Text>
+          <Text style={styles.title}>MY CATATAN</Text>
           <TextInput style={styles.inputNama} value={nama} onChangeText={(text) => setNama(text)} placeholder='Masukkan Nama Anda' />
           <TextInput style={styles.inputCatatan} value={catatan} onChangeText={(text) => setCatatan(text)} multiline={true} placeholder='Masukkan Catatan Anda' />
           <TextInput style={styles.inputHobi} value={hobi} onChangeText={(text) => setHobi(text)} placeholder='Masukkan Hobi Anda' />
@@ -89,38 +135,58 @@ const Crud = () => {
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
             <TouchableOpacity onPress={() => openModal(item)}>
-            <View style={styles.kartuItem}>
-              <Text>Nama: {item.Nama}</Text>
-              <Text>Catatan: {item.Catatanku}</Text>
-              <Text>Hobi: {item.Hobi}</Text>
-              <Text>Tanggal: {item.Tanggal}</Text>
-            </View>
+              <View style={styles.kartuItem}>
+                <Text>Nama: {item.Nama}</Text>
+                <Text>Catatan: {item.Catatanku}</Text>
+                <Text>Hobi: {item.Hobi}</Text>
+                <Text>Tanggal: {item.Tanggal}</Text>
+
+                <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(item.id)}>
+                  <Text style={styles.deleteButtonText}>Hapus</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           )}
         />
 
         {/* Modal */}
-        <Modal 
-        visible={modalVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={closeModal}>
+        <Modal
+          visible={modalVisible}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={closeModal}>
           <View style={styles.modalOverlay}>
           </View>
           <View style={styles.modalContent}>
             {selectedItem && (
               <>
-                <Text>{selectedItem.Nama}</Text>
-                <Text>{selectedItem.Catatanku}</Text>
-                <Text>{selectedItem.Hobi}</Text>
-                <Text>{selectedItem.Tanggal}</Text>
+                <TextInput
+                  style={styles.inputNama}
+                  value={selectedItem.Nama}
+                  onChangeText={(text) => setSelectedItem({ ...selectedItem, Nama: text })}
+                />
+                <TextInput
+                  style={styles.inputCatatan}
+                  value={selectedItem.Catatanku}
+                  onChangeText={(text) => setSelectedItem({ ...selectedItem, Catatanku: text })}
+                />
+                <TextInput
+                  style={styles.inputHobi}
+                  value={selectedItem.Hobi}
+                  onChangeText={(text) => setSelectedItem({ ...selectedItem, Hobi: text })}
+                />
+
+                <TouchableOpacity style={styles.updateButton} onPress={handleUpdate}>
+                  <Text style={styles.updateButtonText}>UPDATE</Text>
+                </TouchableOpacity>
+
               </>
             )}
 
             <TouchableOpacity onPress={closeModal} style={styles.iconClose}>
-              <Text style={{fontSize: 25}}>✖</Text>
+              <Text style={{ fontSize: 25 }}>✖</Text>
             </TouchableOpacity>
-            </View>
+          </View>
         </Modal>
       </View>
     </ScrollView>
@@ -234,6 +300,47 @@ const styles = StyleSheet.create({
   iconClose: {
     position: 'absolute',
     right: 10
-  }
-});
+  },
 
+  updateButton: {
+    backgroundColor: '#4CAF50', // warna hijau fresh
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5, // buat Android
+  },
+
+  updateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+
+  deleteButton: {
+  backgroundColor: '#f44336', // merah terang
+  paddingVertical: 10,
+  paddingHorizontal: 20,
+  borderRadius: 10,
+  alignItems: 'center',
+  marginTop: 10,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.25,
+  shadowRadius: 3.84,
+  elevation: 5,
+},
+
+deleteButtonText: {
+  color: '#fff',
+  fontSize: 16,
+  fontWeight: 'bold',
+  letterSpacing: 1,
+}
+});
